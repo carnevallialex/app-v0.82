@@ -35,35 +35,24 @@ export interface Product {
   name: string;
   description: string;
   category: string;
+  type: 'material_bruto' | 'parte_produto' | 'produto_pronto';
   unit: string;
   components: ProductComponent[];
+  cost_price: number;
+  sale_price?: number;
+  current_stock: number;
+  min_stock: number;
+  supplier?: string;
   created_at: string;
 }
 
 export interface ProductComponent {
-  material_id: string;
-  material_name: string;
+  product_id: string;
+  product_name: string;
   quantity: number;
   unit: string;
-}
-
-export interface Material {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  unit: string;
-  current_stock: number;
-  min_stock: number;
-  current_price: number;
-  price_history: PriceHistory[];
-  created_at: string;
-}
-
-export interface PriceHistory {
-  date: string;
-  price: number;
-  supplier?: string;
+  unit_cost: number;
+  total_cost: number;
 }
 
 export interface ProjectProduct {
@@ -117,8 +106,8 @@ export interface Transaction {
 
 export interface StockMovement {
   id: string;
-  material_id: string;
-  material_name: string;
+  product_id: string;
+  product_name: string;
   type: 'entrada' | 'saida';
   quantity: number;
   unit_price?: number;
@@ -134,7 +123,6 @@ interface AppContextType {
   projects: Project[];
   transactions: Transaction[];
   products: Product[];
-  materials: Material[];
   stockMovements: StockMovement[];
   addClient: (client: Omit<Client, 'id' | 'created_at'>) => void;
   updateClient: (id: string, client: Partial<Client>) => void;
@@ -146,11 +134,10 @@ interface AppContextType {
   addProduct: (product: Omit<Product, 'id' | 'created_at'>) => void;
   updateProduct: (id: string, product: Partial<Product>) => void;
   deleteProduct: (id: string) => void;
-  addMaterial: (material: Omit<Material, 'id' | 'created_at'>) => void;
-  updateMaterial: (id: string, material: Partial<Material>) => void;
-  deleteMaterial: (id: string) => void;
   addStockMovement: (movement: Omit<StockMovement, 'id' | 'created_at'>) => void;
   processProjectStockMovement: (projectId: string, products: ProjectProduct[]) => void;
+  calculateProductCost: (productId: string) => number;
+  getAvailableComponents: () => Product[];
   exportClientsCSV: () => void;
   exportProductsCSV: () => void;
   exportProjectsCSV: () => void;
@@ -184,26 +171,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [projects, setProjects] = useState<Project[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [materials, setMaterials] = useState<Material[]>([]);
   const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
 
   // Carregar dados iniciais simulados
   useEffect(() => {
-    // Materiais de exemplo
-    setMaterials([
+    // Produtos de exemplo (incluindo materiais brutos)
+    setProducts([
       {
         id: '1',
         name: 'MDF 15mm',
         description: 'Placa de MDF 15mm 2,75x1,83m',
         category: 'Painéis',
+        type: 'material_bruto',
         unit: 'UN',
+        components: [],
+        cost_price: 85.50,
+        sale_price: 95.00,
         current_stock: 50,
         min_stock: 10,
-        current_price: 85.50,
-        price_history: [
-          { date: '2024-01-01', price: 80.00 },
-          { date: '2024-02-01', price: 85.50 }
-        ],
+        supplier: 'Fornecedor MDF Ltda',
         created_at: '2024-01-01T10:00:00Z'
       },
       {
@@ -211,30 +197,45 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         name: 'Dobradiça 35mm',
         description: 'Dobradiça de pressão 35mm',
         category: 'Ferragens',
+        type: 'material_bruto',
         unit: 'UN',
+        components: [],
+        cost_price: 12.50,
+        sale_price: 15.00,
         current_stock: 200,
         min_stock: 50,
-        current_price: 12.50,
-        price_history: [
-          { date: '2024-01-01', price: 11.00 },
-          { date: '2024-02-01', price: 12.50 }
-        ],
+        supplier: 'Ferragens ABC',
         created_at: '2024-01-01T10:00:00Z'
-      }
-    ]);
-
-    // Produtos de exemplo
-    setProducts([
+      },
       {
-        id: '1',
+        id: '3',
         name: 'Porta de Armário 40x60cm',
         description: 'Porta padrão para armário de cozinha',
         category: 'Portas',
+        type: 'produto_pronto',
         unit: 'UN',
         components: [
-          { material_id: '1', material_name: 'MDF 15mm', quantity: 0.5, unit: 'UN' },
-          { material_id: '2', material_name: 'Dobradiça 35mm', quantity: 2, unit: 'UN' }
+          { 
+            product_id: '1', 
+            product_name: 'MDF 15mm', 
+            quantity: 0.5, 
+            unit: 'UN',
+            unit_cost: 85.50,
+            total_cost: 42.75
+          },
+          { 
+            product_id: '2', 
+            product_name: 'Dobradiça 35mm', 
+            quantity: 2, 
+            unit: 'UN',
+            unit_cost: 12.50,
+            total_cost: 25.00
+          }
         ],
+        cost_price: 67.75, // Calculado automaticamente
+        sale_price: 150.00,
+        current_stock: 10,
+        min_stock: 5,
         created_at: '2024-01-01T10:00:00Z'
       }
     ]);
@@ -279,7 +280,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         products: [
           {
             id: '1',
-            product_id: '1',
+            product_id: '3',
             product_name: 'Porta de Armário 40x60cm',
             quantity: 10,
             unit_price: 150.00,
@@ -419,8 +420,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const addProduct = (productData: Omit<Product, 'id' | 'created_at'>) => {
+    // Calcular custo automaticamente se tiver componentes
+    let calculatedCost = productData.cost_price;
+    if (productData.components && productData.components.length > 0) {
+      calculatedCost = productData.components.reduce((sum, comp) => sum + comp.total_cost, 0);
+    }
+    
     const newProduct: Product = {
       ...productData,
+      cost_price: calculatedCost,
       id: Date.now().toString(),
       created_at: new Date().toISOString()
     };
@@ -428,6 +436,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const updateProduct = (id: string, updates: Partial<Product>) => {
+    // Recalcular custo se componentes foram atualizados
+    if (updates.components) {
+      updates.cost_price = updates.components.reduce((sum, comp) => sum + comp.total_cost, 0);
+    }
+    
     setProducts(prev => prev.map(product => 
       product.id === id ? { ...product, ...updates } : product
     ));
@@ -435,25 +448,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const deleteProduct = (id: string) => {
     setProducts(prev => prev.filter(product => product.id !== id));
-  };
-
-  const addMaterial = (materialData: Omit<Material, 'id' | 'created_at'>) => {
-    const newMaterial: Material = {
-      ...materialData,
-      id: Date.now().toString(),
-      created_at: new Date().toISOString()
-    };
-    setMaterials(prev => [...prev, newMaterial]);
-  };
-
-  const updateMaterial = (id: string, updates: Partial<Material>) => {
-    setMaterials(prev => prev.map(material => 
-      material.id === id ? { ...material, ...updates } : material
-    ));
-  };
-
-  const deleteMaterial = (id: string) => {
-    setMaterials(prev => prev.filter(material => material.id !== id));
   };
 
   const addStockMovement = (movementData: Omit<StockMovement, 'id' | 'created_at'>) => {
@@ -464,16 +458,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
     setStockMovements(prev => [...prev, newMovement]);
 
-    // Atualiza o estoque do material
-    setMaterials(prev => prev.map(material => {
-      if (material.id === movementData.material_id) {
+    // Atualiza o estoque do produto
+    setProducts(prev => prev.map(product => {
+      if (product.id === movementData.product_id) {
         const newStock = movementData.type === 'entrada' 
-          ? material.current_stock + movementData.quantity
-          : material.current_stock - movementData.quantity;
+          ? product.current_stock + movementData.quantity
+          : product.current_stock - movementData.quantity;
         
-        return { ...material, current_stock: Math.max(0, newStock) };
+        return { ...product, current_stock: Math.max(0, newStock) };
       }
-      return material;
+      return product;
     }));
   };
 
@@ -487,8 +481,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           const totalQuantityNeeded = component.quantity * projectProduct.quantity;
           
           addStockMovement({
-            material_id: component.material_id,
-            material_name: component.material_name,
+            product_id: component.product_id,
+            product_name: component.product_name,
             type: 'saida',
             quantity: totalQuantityNeeded,
             project_id: projectId,
@@ -498,6 +492,27 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         });
       }
     });
+  };
+
+  const calculateProductCost = (productId: string): number => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return 0;
+    
+    if (product.type === 'material_bruto') {
+      return product.cost_price;
+    }
+    
+    return product.components.reduce((total, component) => {
+      const componentProduct = products.find(p => p.id === component.product_id);
+      if (!componentProduct) return total;
+      
+      const componentCost = calculateProductCost(component.product_id);
+      return total + (componentCost * component.quantity);
+    }, 0);
+  };
+
+  const getAvailableComponents = (): Product[] => {
+    return products.filter(p => p.type === 'material_bruto' || p.type === 'parte_produto');
   };
 
   // Funções de exportação CSV
@@ -536,7 +551,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const exportProductsCSV = () => {
-    const headers = ['id', 'nome', 'descricao', 'categoria', 'unidade', 'componentes'];
+    const headers = ['id', 'nome', 'descricao', 'categoria', 'tipo', 'unidade', 'custo', 'preco_venda', 'estoque_atual', 'estoque_minimo', 'componentes'];
     
     const csvContent = [
       headers.join(','),
@@ -545,8 +560,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         `"${product.name}"`,
         `"${product.description}"`,
         `"${product.category}"`,
+        `"${product.type}"`,
         `"${product.unit}"`,
-        `"${product.components.map(c => `${c.material_name}:${c.quantity}`).join(';')}"`
+        product.cost_price,
+        product.sale_price || 0,
+        product.current_stock,
+        product.min_stock,
+        `"${product.components.map(c => `${c.product_name}:${c.quantity}`).join(';')}"`
       ].join(','))
     ].join('\n');
     
@@ -652,13 +672,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (!line) continue;
       
       const values = parseCSVLine(line);
-      if (values.length < 5) continue;
+      if (values.length < 10) continue;
       
       const productData: Omit<Product, 'id' | 'created_at'> = {
         name: values[1] || '',
         description: values[2] || '',
         category: values[3] || '',
-        unit: values[4] || 'UN',
+        type: (values[4] as any) || 'material_bruto',
+        unit: values[5] || 'UN',
+        cost_price: parseFloat(values[6]) || 0,
+        sale_price: parseFloat(values[7]) || undefined,
+        current_stock: parseFloat(values[8]) || 0,
+        min_stock: parseFloat(values[9]) || 0,
         components: []
       };
       
@@ -779,7 +804,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       .filter(p => p.status === 'concluido' || p.status === 'entregue')
       .reduce((sum, p) => sum + (p.budget * 0.5), 0);
     
-    const lowStockItems = materials.filter(m => m.current_stock <= m.min_stock).length;
+    const lowStockItems = products.filter(p => p.current_stock <= p.min_stock).length;
     
     const recentActivity = [
       ...projects.slice(-3).map(p => ({
@@ -810,7 +835,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       projects,
       transactions,
       products,
-      materials,
       stockMovements,
       addClient,
       updateClient,
@@ -822,11 +846,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       addProduct,
       updateProduct,
       deleteProduct,
-      addMaterial,
-      updateMaterial,
-      deleteMaterial,
       addStockMovement,
       processProjectStockMovement,
+      calculateProductCost,
+      getAvailableComponents,
       exportClientsCSV,
       exportProductsCSV,
       exportProjectsCSV,

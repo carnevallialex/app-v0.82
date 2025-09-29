@@ -4,14 +4,14 @@ import { useApp } from '../contexts/AppContext';
 import StockMovementModal from '../components/StockMovementModal';
 
 const Stock: React.FC = () => {
-  const { materials, stockMovements, addStockMovement } = useApp();
+  const { products, stockMovements } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const filteredMovements = stockMovements.filter(movement => {
     const matchesSearch = 
-      movement.material_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      movement.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       movement.project_title?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesType = typeFilter === 'all' || movement.type === typeFilter;
@@ -19,7 +19,7 @@ const Stock: React.FC = () => {
     return matchesSearch && matchesType;
   });
 
-  const lowStockMaterials = materials.filter(m => m.current_stock <= m.min_stock);
+  const lowStockProducts = products.filter(p => p.current_stock <= p.min_stock);
 
   return (
     <div className="space-y-6">
@@ -38,21 +38,21 @@ const Stock: React.FC = () => {
       </div>
 
       {/* Alertas de Estoque Baixo */}
-      {lowStockMaterials.length > 0 && (
+      {lowStockProducts.length > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-red-800 flex items-center">
               <Package className="h-5 w-5 mr-2" />
-              Materiais com Estoque Baixo ({lowStockMaterials.length})
+              Produtos com Estoque Baixo ({lowStockProducts.length})
             </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {lowStockMaterials.map(material => (
-              <div key={material.id} className="bg-white p-4 rounded-lg border border-red-200">
-                <h3 className="font-medium text-gray-800">{material.name}</h3>
+            {lowStockProducts.map(product => (
+              <div key={product.id} className="bg-white p-4 rounded-lg border border-red-200">
+                <h3 className="font-medium text-gray-800">{product.name}</h3>
                 <div className="flex justify-between items-center mt-2">
-                  <span className="text-sm text-gray-600">Atual: {material.current_stock} {material.unit}</span>
-                  <span className="text-sm text-red-600">Mín: {material.min_stock} {material.unit}</span>
+                  <span className="text-sm text-gray-600">Atual: {product.current_stock} {product.unit}</span>
+                  <span className="text-sm text-red-600">Mín: {product.min_stock} {product.unit}</span>
                 </div>
               </div>
             ))}
@@ -99,7 +99,7 @@ const Stock: React.FC = () => {
                   Tipo
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Material
+                  Produto
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Quantidade
@@ -139,7 +139,7 @@ const Stock: React.FC = () => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm font-medium text-gray-900">
-                      {movement.material_name}
+                      {movement.product_name}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

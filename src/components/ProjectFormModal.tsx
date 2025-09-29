@@ -153,7 +153,7 @@ const ProjectFormModal: React.FC<ProjectFormModalProps> = ({ project, onClose })
           : p
       ));
     } else {
-      const unitPrice = 100; // Preço padrão, pode ser ajustado
+      const unitPrice = product.sale_price || product.cost_price * 1.5; // Usar preço de venda ou custo + 50%
       setProjectProducts(prev => [...prev, {
         id: Date.now().toString(),
         product_id: productId,

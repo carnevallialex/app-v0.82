@@ -7,36 +7,36 @@ interface StockMovementModalProps {
 }
 
 const StockMovementModal: React.FC<StockMovementModalProps> = ({ onClose }) => {
-  const { materials, projects, addStockMovement } = useApp();
+  const { products, projects, addStockMovement } = useApp();
   const [formData, setFormData] = useState({
-    material_id: '',
+    product_id: '',
     type: 'entrada' as 'entrada' | 'saida',
     quantity: '',
     unit_price: '',
     project_id: '',
     date: new Date().toISOString().split('T')[0]
   });
-  const [materialSearch, setMaterialSearch] = useState('');
+  const [productSearch, setProductSearch] = useState('');
 
-  const filteredMaterials = materials.filter(material =>
-    material.name.toLowerCase().includes(materialSearch.toLowerCase()) ||
-    material.description.toLowerCase().includes(materialSearch.toLowerCase())
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+    product.description.toLowerCase().includes(productSearch.toLowerCase())
   );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const material = materials.find(m => m.id === formData.material_id);
+    const product = products.find(p => p.id === formData.product_id);
     const project = projects.find(p => p.id === formData.project_id);
     
-    if (!material) return;
+    if (!product) return;
     
     const quantity = parseFloat(formData.quantity);
     const unitPrice = formData.unit_price ? parseFloat(formData.unit_price) : undefined;
     
     const movementData = {
-      material_id: formData.material_id,
-      material_name: material.name,
+      product_id: formData.product_id,
+      product_name: product.name,
       type: formData.type,
       quantity,
       unit_price: unitPrice,
@@ -57,7 +57,7 @@ const StockMovementModal: React.FC<StockMovementModalProps> = ({ onClose }) => {
     }));
   };
 
-  const selectedMaterial = materials.find(m => m.id === formData.material_id);
+  const selectedProduct = products.find(p => p.id === formData.product_id);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -108,42 +108,42 @@ const StockMovementModal: React.FC<StockMovementModalProps> = ({ onClose }) => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <Package className="h-4 w-4 inline mr-2 text-blue-600" />
-              Material
+              Produto
             </label>
             <div className="space-y-3">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                 <input
                   type="text"
-                  placeholder="Buscar material..."
-                  value={materialSearch}
-                  onChange={(e) => setMaterialSearch(e.target.value)}
+                  placeholder="Buscar produto..."
+                  value={productSearch}
+                  onChange={(e) => setProductSearch(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
               
               <select
-                name="material_id"
-                value={formData.material_id}
+                name="product_id"
+                value={formData.product_id}
                 onChange={handleChange}
                 required
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="">Selecione um material</option>
-                {filteredMaterials.map(material => (
-                  <option key={material.id} value={material.id}>
-                    {material.name} - Estoque: {material.current_stock} {material.unit}
+                <option value="">Selecione um produto</option>
+                {filteredProducts.map(product => (
+                  <option key={product.id} value={product.id}>
+                    {product.name} - Estoque: {product.current_stock} {product.unit}
                   </option>
                 ))}
               </select>
             </div>
             
-            {selectedMaterial && (
+            {selectedProduct && (
               <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-sm text-blue-800">
-                  <strong>Estoque atual:</strong> {selectedMaterial.current_stock} {selectedMaterial.unit}
+                  <strong>Estoque atual:</strong> {selectedProduct.current_stock} {selectedProduct.unit}
                 </p>
-                <p className="text-sm text-blue-600">{selectedMaterial.description}</p>
+                <p className="text-sm text-blue-600">{selectedProduct.description}</p>
               </div>
             )}
           </div>
